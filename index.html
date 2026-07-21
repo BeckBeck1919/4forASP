@@ -2104,16 +2104,23 @@
             }
         }
 
-        function playAlarm() {
-            try {
-                const synth = new Tone.PolySynth().toDestination();
-                const now = Tone.now();
-                synth.triggerAttackRelease(["C5", "E5", "G5"], "4n", now);
-                synth.triggerAttackRelease(["C5", "E5", "G5", "C6"], "2n", now + 0.5);
-            } catch (e) {
-                console.log("Audio not initialized");
-            }
-        }
+      function playAlarm() {
+    try {
+        const synth = new Tone.PolySynth().toDestination();
+        const now = Tone.now();
+        
+        // Ubah durasi chord pertama jadi "8n" agar selesai sebelum chord kedua masuk
+        synth.triggerAttackRelease(["C5", "E5", "G5"], "8n", now);
+        synth.triggerAttackRelease(["C5", "E5", "G5", "C6"], "2n", now + 0.5);
+        
+        // Hancurkan synth dari memori setelah 3 detik agar suara pasti berhenti total
+        setTimeout(() => {
+            try { synth.dispose(); } catch (_) {}
+        }, 3000); 
+    } catch (e) {
+        console.log("Audio not initialized");
+    }
+}
 
         /* --- 6. Sistem Belajar: Flashcard & Kuis Singkat --- */
         let currentFcList = [];
