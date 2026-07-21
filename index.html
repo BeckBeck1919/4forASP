@@ -733,6 +733,9 @@
             <div class="glass-premium p-6 rounded-2xl flex flex-col items-center">
                 <div class="w-full flex justify-between items-center mb-4">
                     <h3 class="font-bold text-white flex items-center gap-2"><i class="fas fa-stopwatch text-purple-400"></i> Pomodoro</h3>
+                    <button onclick="togglePomodoroPiP()" title="Jadikan Floating Window" class="w-7 h-7 rounded-lg bg-white/10 hover:bg-purple-500/30 text-purple-300 flex items-center justify-center text-xs transition-colors">
+                <i class="fas fa-external-link-alt"></i>
+                </button>
                     <span id="pomodoro-mode" class="text-xs font-bold px-2 py-1 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">FOKUS</span>
                 </div>
                 
@@ -1020,11 +1023,13 @@
             <span class="inline-block px-3 py-1 bg-white/10 text-gray-300 rounded-full text-xs font-bold mb-5 border border-white/10" id="update-version-badge">Versi 1.1</span>
             
             <div class="space-y-3 text-gray-300 text-sm leading-relaxed mb-8">
-                <p>Halo Guys! Tolong banget nih diperhatikan:</p>
+                <p>Halo Guys! Ada sedikit informasi nih:</p>
                 <ul class="list-disc pl-5 space-y-1 text-cyan-100">
-                    <li><strong>BANK KUIS:</strong> Jika berkenan, mohon untuk berbagi kuisnya untuk menjadi bahan persiapan UTS bersama ya! Tenang, tidak ada unsur paksaan kok! Makasih ya!</li>
-                    <li><strong>JANGAN</strong> NYONTEK, pokoknya no no ya, NO NO</li>
-                </ul>
+
+                <li><strong>Audio Sambutan & Subtitle:</strong> Sapaan pembuka baru yang lebih hidup lengkap dengan teks subtitle melayang otomatis.</li>
+                <li><strong>Floating Pomodoro:</strong> Sekarang timer Pomodoro bisa dijadikan jendela mini melayang (Picture-in-Picture), jadi tetap kelihatan meskipun kamu pindah tab lain.</li>
+                <li><strong>Perbaikan Sistem:</strong> Peningkatan stabilitas tombol navigasi dan optimalisasi antarmuka.</li>
+                 
             </div>
             
             <button onclick="closeUpdateNote()" class="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold hover:shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all">
@@ -1717,6 +1722,7 @@
             const loader = document.getElementById('cheatsheet-frame-loader');
             if (loader) loader.classList.add('hide');
         }
+        
 
         function closeCheatsheetViewer() {
             document.getElementById('cheatsheet-viewer-modal').classList.add('hide');
@@ -3352,7 +3358,7 @@
             return false;
         }
 // UPDATE VARIABEL INI setiap kali kamu mau memunculkan catatan baru
-        const CURRENT_APP_VERSION = "v1.3"; 
+        const CURRENT_APP_VERSION = "v1.4"; 
 
         function checkUpdateNote() {
             const lastSeenVersion = localStorage.getItem('4forasp_version_seen');
@@ -3407,12 +3413,12 @@
             // Silakan diubah-ubah angkanya agar pas dengan tempo bicara audionya.
             const subtitles = [
                 [0, "Come on, let's do this!"],
-                [2500, "Hey! I know studying right now is exhausting."],
+                [2000, "Hey! I know studying right now is exhausting."],
                 [5500, "But you know what's worse?"],
-                [7500, "Getting a bad grade now..."],
-                [9500, "and panicking to fix it during the finals."],
-                [13000, "Let's just crush it today."],
-                [15000, "You got this!"]
+                [6500, "Getting a bad grade now..."],
+                [8500, "and panicking to fix it during the finals."],
+                [11500, "Let's just crush it today."],
+                [14000, "You got this!"]
             ];
 
             // Looping untuk mengganti teks sesuai waktu yang ditentukan
@@ -3439,6 +3445,103 @@
                 // Lanjutkan ke musik latar (The Sunlit Shelf)
                 if (onComplete) onComplete();
             };
+        }
+// --- FITUR FLOATING POMODORO (Document Picture-in-Picture) ---
+        let pipWindow = null;
+
+        async function togglePomodoroPiP() {
+            if (!('documentPictureInPicture' in window)) {
+                showToast("Tidak Didukung", "Browser kamu belum mendukung floating window mode ini.");
+                return;
+            }
+
+            if (pipWindow) {
+                pipWindow.close();
+                return;
+            }
+
+            try {
+                pipWindow = await window.documentPictureInPicture.requestWindow({
+                    width: 300,
+                    height: 260
+                });
+
+                [...document.styleSheets].forEach((styleSheet) => {
+                    try {
+                        const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
+                        const style = pipWindow.document.createElement('style');
+                        style.textContent = cssRules;
+                        pipWindow.document.head.appendChild(style);
+                    } catch (e) {
+                        const link = pipWindow.document.createElement('link');
+                        link.rel = 'stylesheet';
+                        link.href = styleSheet.href;
+                        pipWindow.document.head.appendChild(link);
+                    }
+                });
+
+                const container = pipWindow.document.createElement('div');
+                container.className = "p-5 bg-[#050508] text-white flex flex-col items-center justify-center h-full select-none";
+                container.innerHTML = `
+                    <div class="w-full flex justify-between items-center mb-3">
+                        <span id="pip-mode" class="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">FOKUS</span>
+                        <span class="text-xs text-gray-400 font-heading">4forASP Pomodoro</span>
+                    </div>
+                    <div class="text-4xl font-digital font-bold text-white text-glow mb-4 tracking-widest" id="pip-display">25:00</div>
+                    <div class="flex gap-2 w-full">
+                        <button id="pip-toggle-btn" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 font-bold text-xs shadow-lg transition-all">
+                            Mulai
+                        </button>
+                        <button id="pip-reset-btn" class="w-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-xs transition-colors">
+                            <i class="fas fa-redo-alt"></i>
+                        </button>
+                    </div>
+                `;
+                pipWindow.document.body.appendChild(container);
+
+                const updatePipElements = () => {
+                    if (!pipWindow || pipWindow.closed) return;
+                    const display = pipWindow.document.getElementById('pip-display');
+                    const mode = pipWindow.document.getElementById('pip-mode');
+                    const toggleBtn = pipWindow.document.getElementById('pip-toggle-btn');
+                    
+                    if (display) display.innerText = document.getElementById('pomodoro-display').innerText;
+                    if (mode) {
+                        mode.innerText = document.getElementById('pomodoro-mode').innerText;
+                        mode.className = document.getElementById('pomodoro-mode').className + " text-[10px]";
+                    }
+                    if (toggleBtn) {
+                        const mainText = document.getElementById('pomo-text').innerText;
+                        toggleBtn.innerText = mainText;
+                        toggleBtn.className = mainText === 'Jeda' 
+                            ? "flex-1 py-2.5 rounded-xl bg-red-500 text-white font-bold text-xs shadow-lg transition-all" 
+                            : "flex-1 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 font-bold text-xs text-white shadow-lg transition-all";
+                    }
+                };
+
+                const syncInterval = setInterval(updatePipElements, 200);
+                updatePipElements();
+
+                pipWindow.document.getElementById('pip-toggle-btn').onclick = () => {
+                    togglePomodoro();
+                    updatePipElements();
+                };
+                pipWindow.document.getElementById('pip-reset-btn').onclick = () => {
+                    resetPomodoro();
+                    updatePipElements();
+                };
+
+                pipWindow.addEventListener('pagehide', () => {
+                    clearInterval(syncInterval);
+                    pipWindow = null;
+                });
+
+                showToast("Floating Window Aktif", "Timer Pomodoro sekarang melayang di atas layar!");
+
+            } catch (error) {
+                console.warn("Gagal membuka Picture-in-Picture:", error);
+                showToast("Gagal", "Fitur floating window diblokir oleh browser.");
+            }
         }
     </script>
 </body>
