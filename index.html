@@ -1032,6 +1032,21 @@
         </div>
     </div>
 
+    <!-- Modal Catatan / Update (Popup Pertama Kali) -->
+    <div id="update-note-modal" class="fixed inset-0 z-[400] bg-[#030305]/90 backdrop-blur-md flex items-center justify-center hide opacity-0 transition-opacity duration-300">
+        <div class="glass-premium p-8 rounded-3xl max-w-lg w-full mx-4 border border-cyan-500/30 shadow-[0_0_40px_rgba(34,211,238,0.15)] relative transform scale-95 transition-transform duration-300" id="update-note-content">
+            <!-- (Isi dari modal updatemu ada di sini...) -->
+        </div>
+    </div>
+
+    <!-- ===== PASTE KODE SUBTITLE TEPAT DI SINI ===== -->
+    <!-- Floating Subtitle untuk Audio Pembuka -->
+    <div id="subtitle-container" class="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-[500] pointer-events-none transition-all duration-500 opacity-0 translate-y-4">
+        <div class="glass-premium px-6 py-3 rounded-2xl border border-cyan-500/30 shadow-[0_0_20px_rgba(34,211,238,0.2)] text-center">
+            <p id="subtitle-text" class="text-white font-bold text-[15px] md:text-lg tracking-wide text-glow">...</p>
+        </div>
+    </div>
+
     
     <script src="learning-data.js"></script>
     <script>
@@ -1406,9 +1421,15 @@
             unlockAudioEngine().then(isReady => {
                 if (isReady) playOriginalOpeningSound();
             });
-            // Musik sudah diprime saat tombol login diklik; naikkan volumenya perlahan setelah motif pembukaan.
-            setTimeout(() => resumeBackgroundMusic(1400), 650);
-
+            
+            // Tunggu 1.2 detik agar sound efek selesai, lalu jalankan MP3 ElevenLabs
+            setTimeout(() => {
+                playElevenLabsAudio(() => {
+                    // Setelah audio selesai, baru musik latar di-fade in
+                    resumeBackgroundMusic(1400);
+                });
+            }, 1200);
+            
             // Ledakan Cahaya
             const burst = document.getElementById('light-burst');
             burst.classList.add('explode');
@@ -3367,6 +3388,56 @@
             setTimeout(() => {
                 modal.classList.add('hide');
             }, 300);
+        }
+// Fungsi untuk memutar MP3 ElevenLabs & Menampilkan Subtitle
+        function playElevenLabsAudio(onComplete) {
+            // 1. Panggil file audionya (Pastikan nama filenya "sapaan.mp3")
+            const audio = new Audio('sapaan.mp3'); 
+            
+            const subtitleBox = document.getElementById('subtitle-container');
+            const subtitleText = document.getElementById('subtitle-text');
+            
+            // 2. Tampilkan kotak subtitle (Efek Fade in & Naik)
+            subtitleBox.classList.remove('opacity-0', 'translate-y-4');
+            subtitleBox.classList.add('opacity-100', 'translate-y-0');
+
+            // 3. Pengaturan Timing Subtitle
+            // Angka di depan adalah milidetik (misal: 3500 = 3.5 detik). 
+            // Silakan diubah-ubah angkanya agar pas dengan tempo bicara audionya.
+            const subtitles = [
+                [0, "Come on, let's do this!"],
+                [2500, "Hey! I know studying right now is exhausting."],
+                [5500, "But you know what's worse?"],
+                [7500, "Getting a bad grade now..."],
+                [9500, "and panicking to fix it during the finals."],
+                [13000, "Let's just crush it today."],
+                [15000, "You got this!"]
+            ];
+
+            // Looping untuk mengganti teks sesuai waktu yang ditentukan
+            subtitles.forEach(sub => {
+                setTimeout(() => {
+                    subtitleText.innerText = sub[1];
+                }, sub[0]);
+            });
+
+            // 4. Putar Audio dan Deteksi Kapan Selesai
+            audio.play().catch(e => {
+                console.warn("Audio autoplay diblokir browser:", e);
+                // Jika error/diblokir, musik background tetap akan dilanjutkan
+                if(onComplete) onComplete();
+                subtitleBox.classList.add('opacity-0', 'translate-y-4');
+            });
+
+            // Apa yang terjadi kalau audionya sudah selesai?
+            audio.onended = () => {
+                // Sembunyikan subtitle
+                subtitleBox.classList.remove('opacity-100', 'translate-y-0');
+                subtitleBox.classList.add('opacity-0', 'translate-y-4');
+                
+                // Lanjutkan ke musik latar (The Sunlit Shelf)
+                if (onComplete) onComplete();
+            };
         }
     </script>
 </body>
